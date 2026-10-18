@@ -1,0 +1,23 @@
+* {
+    all: unset;
+    font-family: monospace;
+}
+
+.telemetry {
+    padding: 18px;
+    font-size: 14px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.graph {
+    font-size: 18px;
+}
+
+.ceph-health {
+    font-weight: bold;
+}

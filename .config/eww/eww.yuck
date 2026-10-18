@@ -1,0 +1,375 @@
+;; ============================================================
+;; Telemetry source
+;; ============================================================
+
+(deflisten telemetry
+  :initial "{\"network\":{},\"nvidia\":{},\"ceph\":{},\"system\":{},\"routing\":{}}"
+  `~/.local/bin/eww.py`)
+
+
+;; ============================================================
+;; LAN
+;; ============================================================
+
+(defwidget lan-widget []
+  (box
+    :orientation "v"
+    :spacing 2
+    :space-evenly false    
+
+    (label
+      :halign "start"
+      :text "LAN  N/A ${telemetry.network.lan.temperature}°C")
+
+    (label
+      :halign "start"
+      :text "↓ ${telemetry.network.lan.rx}   ↑ ${telemetry.network.lan.tx}")
+
+    (label
+      :class "graph"
+      :halign "start"
+      :text "${telemetry.network.lan.rx_graph}")))
+
+
+;; ============================================================
+;; WAN
+;; ============================================================
+
+(defwidget wan-widget []
+  (box
+    :orientation "v"
+    :spacing 2
+    :space-evenly false
+    (label
+      :halign "start"
+      :text "WAN  wlan0")
+
+    (label
+      :halign "start"
+      :text "↓ ${telemetry.network.wan.rx}   ↑ ${telemetry.network.wan.tx}")
+
+    (label
+      :class "graph"
+      :halign "start"
+      :text "${telemetry.network.wan.rx_graph}")))
+
+
+;; ============================================================
+;; GPU
+;; ============================================================
+(defwidget intel-gpu-widget []
+  (box
+    :orientation "v"
+    :space-evenly false
+    :spacing 2
+
+    (label
+      :halign "start"
+      :text "iGPU")
+
+    (label
+      :halign "start"
+      :text "${telemetry.intel_gpu.name}")
+
+    (label
+      :halign "start"
+      :text "${telemetry.intel_gpu.utilization}%   ${telemetry.intel_gpu.frequency_mhz} MHz   ${telemetry.intel_gpu.power_w} W")
+
+    (label
+      :halign "start"
+      :text "RC6 ${telemetry.intel_gpu.rc6}%   REQ ${telemetry.intel_gpu.requested_mhz} MHz")))
+
+(defwidget gpu-widget []
+  (box
+    :orientation "v"
+    :spacing 2
+    :space-evenly false
+    (label
+      :halign "start"
+      :text "dGPU")
+
+    (label
+      :halign "start"
+      :text "${telemetry.nvidia.name}")
+
+    (label
+      :halign "start"
+      :text "${telemetry.nvidia.utilization}%   ${telemetry.nvidia.temperature}°C   ${telemetry.nvidia.power_w} W")
+
+    (label
+      :halign "start"
+      :text "VRAM ${telemetry.nvidia.memory}")))
+
+
+;; ============================================================
+;; Ceph
+;; ============================================================
+
+(defwidget ceph-widget []
+  (box
+    :orientation "v"
+    :spacing 2
+    :space-evenly false
+    (label
+      :halign "start"
+      :text "CEPH")
+
+    (label
+      :class "ceph-health"
+      :halign "start"
+      :text "● ${telemetry.ceph.health}")
+
+    (label
+      :halign "start"
+      :text "OSD ${telemetry.ceph.osd_up}/${telemetry.ceph.osd_total} up   ${telemetry.ceph.osd_in} in")
+
+    (label
+      :halign "start"
+      :text "${telemetry.ceph.used} / ${telemetry.ceph.total}   ${telemetry.ceph.pg_total} PG")
+
+    (label
+      :halign "start"
+      :text "IO  ↓ ${telemetry.ceph.read}   ↑ ${telemetry.ceph.write}")
+
+    (label
+      :halign "start"
+      :text "OPS R ${telemetry.ceph.read_iops}   W ${telemetry.ceph.write_iops}")
+
+    (label
+      :class "ceph-io-graph"
+      :halign "start"
+      :text "R ${telemetry.ceph.read_graph}")
+
+    (label
+      :class "ceph-io-graph"
+      :halign "start"
+      :text "W ${telemetry.ceph.write_graph}")))
+
+
+;; ============================================================
+;; System
+;; ============================================================
+
+(defwidget system-widget []
+  (box
+    :orientation "v"
+    :spacing 2
+    :space-evenly false
+    (label
+      :halign "start"
+      :text "SYSTEM")
+
+    (label
+      :halign "start"
+      :text "CPU ${telemetry.system.cpu}%   ${telemetry.system.temperature}°C")
+
+    (label
+      :class "system-graph"
+      :halign "start"
+      :text "${telemetry.system.cpu_graph}")
+
+    (label
+      :halign "start"
+      :text "RAM ${telemetry.system.used} / ${telemetry.system.total}")
+
+    (label
+      :halign "start"
+      :text "SWAP ${telemetry.system.swap_used} / ${telemetry.system.swap_total}")
+    (label
+  :halign "start"
+  :text "2M  ${telemetry.system.hugepages["hp_2m"].used} / ${telemetry.system.hugepages["hp_2m"].total}   ${telemetry.system.hugepages["hp_2m"].used_size}")
+
+(label
+  :halign "start"
+  :text "1G  ${telemetry.system.hugepages["hp_1g"].used} / ${telemetry.system.hugepages["hp_1g"].total}   ${telemetry.system.hugepages["hp_1g"].used_size}")
+
+    (label
+      :halign "start"
+      :text "LOAD ${telemetry.system.load1}   ${telemetry.system.load5}   ${telemetry.system.load15}")
+
+    (label
+      :halign "start"
+      :text "UP ${telemetry.system.uptime}")))
+
+
+;; ============================================================
+;; Routing
+;; ============================================================
+
+(defwidget routing-widget []
+  (box
+    :orientation "v"
+    :spacing 7
+    :space-evenly false
+    (label
+      :halign "start"
+      :text "ROUTING")
+
+    ;; --------------------------------------------------------
+    ;; Internet
+    ;; --------------------------------------------------------
+
+    (box
+      :orientation "v"
+      :spacing 1
+      :space-evenly false
+      (label
+        :halign "start"
+        :text "INTERNET")
+
+      (label
+        :halign "start"
+        :text "${telemetry.routing.internet.interface}   ${telemetry.routing.internet.address}")
+
+      (label
+        :halign "start"
+        :text "GW ${telemetry.routing.internet.gateway}   metric ${telemetry.routing.internet.metric}"))
+
+    ;; --------------------------------------------------------
+    ;; OSPF
+    ;; --------------------------------------------------------
+(box
+  :orientation "v"
+  :space-evenly false
+  :spacing 2
+
+  (label
+    :halign "start"
+    :text "OSPF")
+
+  (label
+    :class "routing-state"
+    :halign "start"
+    :text "● ${telemetry.routing.ospf.state}   ${telemetry.routing.ospf.full}/${telemetry.routing.ospf.total}")
+
+  (label
+    :halign "start"
+    :text "NEIGHBOR")
+
+  (label
+    :halign "start"
+    :text "${telemetry.routing.ospf.router_text}")
+
+  (label
+    :halign "start"
+    :text "ROUTERS")
+
+  (label
+    :halign "start"
+    :text "${telemetry.routing.ospf.topology_text}"))
+    ;; --------------------------------------------------------
+    ;; Local VM networks
+    ;; --------------------------------------------------------
+
+    (box
+      :orientation "v"
+      :spacing 1
+      :space-evenly false
+      (label
+        :halign "start"
+        :text "VM LOCAL")
+
+      (label
+        :halign "start"
+        :text "${telemetry.routing.vm_local.networks}")
+
+      (label
+        :halign "start"
+        :text "${telemetry.routing.vm_local.interfaces}"))
+
+    ;; --------------------------------------------------------
+    ;; Remote VM networks
+    ;; --------------------------------------------------------
+
+    (box
+      :orientation "v"
+      :spacing 1
+      :space-evenly false
+      (label
+        :halign "start"
+        :text "VM REMOTE")
+
+      (label
+        :halign "start"
+        :text "${telemetry.routing.vm_remote.networks}")
+
+      (label
+        :halign "start"
+        :text "via ${telemetry.routing.vm_remote.via}"))))
+
+
+;; ============================================================
+;; Right panel
+;;
+;; LAN
+;; WAN
+;; GPU
+;; CEPH
+;; ============================================================
+
+(defwidget telemetry-widget []
+  (box
+    :class "telemetry"
+    :orientation "v"
+    :spacing 10
+    :space-evenly false
+    (lan-widget)
+    (wan-widget)
+    (intel-gpu-widget)
+    (gpu-widget)
+    (ceph-widget)))
+
+
+;; ============================================================
+;; Left sidecar
+;;
+;; SYSTEM
+;; ROUTING
+;; ============================================================
+
+(defwidget system-routing-widget []
+  (box
+    :class "telemetry"
+    :orientation "v"
+    :spacing 20
+    :space-evenly false
+    (system-widget)
+    (routing-widget)))
+
+
+;; ============================================================
+;; Windows
+;; ============================================================
+
+(defwindow telemetry-window
+  :monitor 0
+
+  :geometry
+    (geometry
+      :x "30px"
+      :y "70px"
+      :width "380px"
+      :anchor "top right")
+
+  :stacking "bottom"
+  :exclusive false
+  :focusable false
+
+  (telemetry-widget))
+
+
+(defwindow system-window
+  :monitor 0
+
+  :geometry
+    (geometry
+      :x "442px"
+      :y "70px"
+      :width "320px"
+      :anchor "top right")
+
+  :stacking "bottom"
+  :exclusive false
+  :focusable false
+
+  (system-routing-widget))
