@@ -4,6 +4,8 @@ import time
 from .ceph import get_ceph, initial_ceph
 from .config import (
     CEPH_INTERVAL,
+    ZFS_INTERVAL,
+    NVMEOF_INTERVAL,
     INTEL_GPU_INTERVAL,
     INTERFACES,
     INTERVAL,
@@ -15,6 +17,8 @@ from .intel_gpu import get_intel_gpu, initial_intel_gpu
 from .nvidia import get_nvidia, initial_nvidia
 from .routing import get_routing, initial_routing
 from .system import SystemMonitor
+from .zfs import get_zfs, initial_zfs
+from .nvmeof import get_nvmeof, initial_nvmeof
 
 
 def main():
@@ -28,11 +32,15 @@ def main():
     intel_gpu = initial_intel_gpu()
     ceph = initial_ceph()
     routing = initial_routing()
+    zfs = initial_zfs()
+    nvmeof = initial_nvmeof()
 
     last_nvidia = 0.0
     last_intel_gpu = 0.0
     last_ceph = 0.0
     last_routing = 0.0
+    last_zfs = 0.0
+    last_nvmeof = 0.0
 
     while True:
         loop_start = time.monotonic()
@@ -59,6 +67,14 @@ def main():
             routing = get_routing()
             last_routing = loop_start
 
+        if loop_start - last_zfs >= ZFS_INTERVAL:
+            zfs = get_zfs()
+            last_zfs = loop_start
+
+        if loop_start - last_nvmeof >= NVMEOF_INTERVAL:
+            nvmeof = get_nvmeof()
+            last_nvmeof = loop_start
+
         payload = {
             "network": network,
             "nvidia": nvidia,
@@ -66,6 +82,8 @@ def main():
             "ceph": ceph,
             "system": system,
             "routing": routing,
+            "zfs": zfs,
+            "nvmeof": nvmeof,
         }
 
         print(json.dumps(payload, separators=(",", ":")), flush=True)
