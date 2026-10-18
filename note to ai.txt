@@ -1,0 +1,4 @@
+1. Keep the modular structure.
+2. Do not make failed telemetry return false 'zero', or crash entire script.
+3. Assume reasonably performant desktop with gui using requested features for hobbyist or development server.
+4. Make sure everything runs without root permission (You can instead give instructions to permit required permission to desktop user)
