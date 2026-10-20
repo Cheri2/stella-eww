@@ -15,7 +15,8 @@ The storage section refreshes every 5 seconds (`ZFS_INTERVAL` and
   if access is denied, configure read-only access according to your platform.
 - **NVMe-oF:** reads Linux `/sys/class/block` and NVMe controller attributes;
   no `nvme-cli`, root, discovery, or connection command is needed. Shows
-  imported namespace block device paths using TCP or RDMA, one per line.
+  imported namespace block device paths with `TCP` or `RDMA`, one per line.
+  Multipath devices using both transports show `RDMA/TCP`.
   Controller details remain in JSON only. Local PCIe devices, partitions, and
   native multipath controller-path devices (`nvmeXcYnZ`) are excluded from the
   display; the namespace head (`nvmeXnZ`) is shown once.

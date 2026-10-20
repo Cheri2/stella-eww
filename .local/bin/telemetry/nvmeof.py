@@ -44,7 +44,12 @@ def get_nvmeof(block_root=Path("/sys/class/block")):
                 })
             if paths:
                 devices.append({"device": f"/dev/{block.name}", "paths": paths})
-        text = "\n".join(d["device"] for d in devices)
+        text = "\n".join(
+            d["device"] + "  " + "/".join(sorted({
+                p["transport"].upper() for p in d["paths"]
+            }))
+            for d in devices
+        )
         return {"available": True, "status": "OK" if devices else "NONE",
                 "devices": devices, "text": text or "No NVMe-oF block devices"}
     except (OSError, ValueError):

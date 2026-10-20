@@ -55,7 +55,7 @@ class StorageTests(unittest.TestCase):
             self.assertEqual(data['status'], 'OK')
             self.assertEqual([d['device'] for d in data['devices']], ['/dev/nvme0n1', '/dev/nvme1n1', '/dev/nvme3n1'])
             self.assertEqual([p['transport'] for p in data['devices'][-1]['paths']], ['tcp', 'rdma'])
-            self.assertEqual(data['text'], '/dev/nvme0n1\n/dev/nvme1n1\n/dev/nvme3n1')
+            self.assertEqual(data['text'], '/dev/nvme0n1  TCP\n/dev/nvme1n1  RDMA\n/dev/nvme3n1  RDMA/TCP')
             (subsystem / 'nvme0' / 'transport').unlink()
             self.assertEqual(get_nvmeof(blocks)['status'], 'UNAVAILABLE')
 
