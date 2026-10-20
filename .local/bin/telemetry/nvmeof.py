@@ -15,7 +15,7 @@ def get_nvmeof(block_root=Path("/sys/class/block")):
     try:
         devices = []
         for block in sorted(block_root.iterdir()):
-            if not NAMESPACE.fullmatch(block.name):
+            if not re.fullmatch(r"nvme\d+n\d+", block.name):
                 continue
             namespace = block.resolve(strict=True)
             # Ordinary namespaces live under their controller. Native multipath
@@ -44,10 +44,7 @@ def get_nvmeof(block_root=Path("/sys/class/block")):
                 })
             if paths:
                 devices.append({"device": f"/dev/{block.name}", "paths": paths})
-        text = "\n".join(
-            f'{d["device"]}  {p["transport"].upper()}  {p["state"]}\n{p["address"]}'
-            for d in devices for p in d["paths"]
-        )
+        text = "\n".join(d["device"] for d in devices)
         return {"available": True, "status": "OK" if devices else "NONE",
                 "devices": devices, "text": text or "No NVMe-oF block devices"}
     except (OSError, ValueError):

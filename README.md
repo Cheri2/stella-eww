@@ -15,9 +15,10 @@ The storage section refreshes every 5 seconds (`ZFS_INTERVAL` and
   if access is denied, configure read-only access according to your platform.
 - **NVMe-oF:** reads Linux `/sys/class/block` and NVMe controller attributes;
   no `nvme-cli`, root, discovery, or connection command is needed. Shows
-  imported namespace block devices using TCP or RDMA, their controller state,
-  and transport address. Local PCIe devices and partitions are excluded.
-  Native multipath namespace heads list the matching controller paths as well.
+  imported namespace block device paths using TCP or RDMA, one per line.
+  Controller details remain in JSON only. Local PCIe devices, partitions, and
+  native multipath controller-path devices (`nvmeXcYnZ`) are excluded from the
+  display; the namespace head (`nvmeXnZ`) is shown once.
   This does not discover targets or establish connections.
 
 `NONE` means a successful scan found no pools/devices. `UNAVAILABLE` means a
@@ -33,3 +34,17 @@ python3 -B -m unittest discover -s tests -v
 
 The tests use command/sysfs fixtures; real ZFS, NVMe-oF, and Eww rendering need
 validation on the target desktop.
+
+## BGP summary
+
+The routing panel uses FRR `vtysh -c 'show bgp summary json'` to report
+IPv4/IPv6 unicast in the default VRF. It refreshes with `ROUTING_INTERVAL`
+(default 5 seconds). Counts are peer/address-family sessions: a peer in both
+families is counted twice. Each entry shows address, remote AS, session state,
+and received prefixes (RX). Inactive sessions or missing prefix counts show
+`N/A`. An empty peer table shows `NO PEERS`; missing FRR, denied access,
+command failure, and unsupported output show `UNAVAILABLE`, with unknown counts
+rather than zero. FRR's vtysh access must already be available to the desktop
+user (configure the distribution's FRR/vty group permissions if needed); no
+sudo or routing configuration changes are performed. Other VRFs and address
+families are outside this basic summary.

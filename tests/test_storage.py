@@ -49,11 +49,13 @@ class StorageTests(unittest.TestCase):
             head.mkdir()
             (head / 'nsid').write_text('1')
             (blocks / head.name).symlink_to(head)
+            (blocks / 'nvme0c0n1').symlink_to(subsystem / 'nvme0' / 'nvme0n1')
             (blocks / 'nvme0n1p1').mkdir()  # Partitions must not be listed.
             data = get_nvmeof(blocks)
             self.assertEqual(data['status'], 'OK')
             self.assertEqual([d['device'] for d in data['devices']], ['/dev/nvme0n1', '/dev/nvme1n1', '/dev/nvme3n1'])
             self.assertEqual([p['transport'] for p in data['devices'][-1]['paths']], ['tcp', 'rdma'])
+            self.assertEqual(data['text'], '/dev/nvme0n1\n/dev/nvme1n1\n/dev/nvme3n1')
             (subsystem / 'nvme0' / 'transport').unlink()
             self.assertEqual(get_nvmeof(blocks)['status'], 'UNAVAILABLE')
 

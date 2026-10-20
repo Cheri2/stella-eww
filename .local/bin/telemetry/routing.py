@@ -2,6 +2,7 @@ import json
 import subprocess
 
 from .config import VM_NETWORKS
+from .bgp import get_bgp, initial_bgp
 
 
 def get_routes():
@@ -111,6 +112,7 @@ def initial_routing():
             "topology": [],
             "topology_text": "LOADING",
         },
+        "bgp": initial_bgp(),
         "vm_local": {"count": 0, "networks": "NONE", "interfaces": ""},
         "vm_remote": {"count": 0, "networks": "NONE", "via": "N/A"},
         "vm_local_routes": [],
@@ -234,6 +236,7 @@ def get_routing():
             "topology": ospf_topology,
             "topology_text": ospf_topology_text,
         },
+        "bgp": get_bgp(),
         "vm_local": {
             "count": len(local_vm),
             "networks": local_text,

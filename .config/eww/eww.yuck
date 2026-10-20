@@ -257,6 +257,14 @@
   (label
     :halign "start"
     :text "${telemetry.routing.ospf.topology_text}"))
+    (box
+      :orientation "v"
+      :spacing 2
+      :space-evenly false
+      (label :halign "start" :text "BGP")
+      (label :halign "start" :text "${telemetry.routing.bgp.state}")
+      (label :halign "start" :text "${telemetry.routing.bgp.text}"))
+
     ;; --------------------------------------------------------
     ;; Local VM networks
     ;; --------------------------------------------------------
