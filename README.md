@@ -3,19 +3,23 @@ Linux desktop telemetry panels built with Eww and a modular Python collector.
 The collector emits one JSON object per update; Eww consumes it with `deflisten`.
 Python uses only the standard library.
 
-## Existing monitoring features
+## Monitoring features
 
 | Section | Displayed information | Source / requirements |
 | --- | --- | --- |
 | LAN / WAN | Receive/transmit bit rates, receive sparkline; LAN NIC temperature when exposed | Linux network sysfs counters and NIC hwmon |
 | SYSTEM | CPU utilization and history, CPU temperature, RAM and swap used/total, load averages, uptime | `/proc` and hwmon (`coretemp`, `k10temp`, `zenpower`) |
+| CPU identity | Model name, online physical core count and logical thread count | `/proc/cpuinfo`; unavailable topology shows `N/A` |
 | Hugepages | Used/total page counts and used size for 2 MiB and 1 GiB pages | `/sys/kernel/mm/hugepages` |
 | NVIDIA dGPU | Model, utilization, temperature, power draw, VRAM used/total | NVIDIA driver and `nvidia-smi`; first GPU returned |
 | Intel iGPU | Utilization, actual/requested frequency, RC6 residency, GPU power where supported | Intel DRM device and driver-specific tools below |
 | Ceph | Cluster health, OSD up/total/in counts, used/total capacity, PG count, read/write throughput and IOPS, separate read/write sparklines | Ceph CLI, cluster configuration and readable client keyring |
+| ZFS | Imported pool names, health, free/total capacity | OpenZFS `zpool`; read-only pool listing |
+| NVMe-oF | Imported block device paths and TCP/RDMA transport; one row per namespace head | Linux block/NVMe sysfs; no `nvme-cli` required |
 | Internet routing | Selected default route interface, source address, gateway and metric | `ip -j route show table main` (iproute2) |
 | OSPF neighbors | Neighbor router IDs, addresses, states and FULL/total summary | FRR `vtysh`, OSPF neighbor JSON |
 | OSPF topology | Router IDs classified as SELF, DIRECT or REMOTE | FRR OSPF router-LSA database; DIRECT means present in the neighbor list |
+| BGP | Established/total sessions, peer addresses, remote AS, state and received prefixes | FRR `vtysh`; default-VRF IPv4/IPv6 unicast summary |
 | VM networks | Configured local networks with UP/DOWN and interfaces; remote OSPF networks and next hops | Main IPv4 route table filtered by `VM_NETWORKS` |
 
 The network JSON also includes interface operational state, numeric bit rates,
@@ -37,10 +41,56 @@ it is not a connectivity probe and does not inspect policy-routing tables.
 VM local routes must use protocol `kernel` with no gateway; remote routes must
 use protocol `ospf`. BGP-learned VM routes are not included in that list.
 
+### CPU identity details
+
+SYSTEM shows the CPU model and online core/thread counts visible in
+`/proc/cpuinfo`, refreshed with system telemetry. Physical cores are counted by
+(socket ID, core ID), so SMT siblings are not counted twice. Threads are logical
+processor entries. These are OS-visible counts, not per-process CPU affinity or
+container quota limits. If topology is absent (for example in some VMs or ARM
+systems), core count shows `N/A` rather than assuming one core per thread.
+No additional packages or elevated permissions are required.
+
+### Storage details
+
+- **ZFS:** requires `zpool` from the desktop distribution's OpenZFS tools.
+  Runs `zpool list -H -p -o name,size,alloc,free,health` without sudo and
+  shows every imported pool's health and free/total bytes. Pool `free` is raw
+  pool capacity; it is not dataset `available` and does not account for dataset
+  quotas, reservations, or all allocation constraints. No pools are imported
+  and no ZFS properties are changed. Verify the command as your desktop user;
+  if access is denied, configure read-only access according to your platform.
+- **NVMe-oF:** reads Linux `/sys/class/block` and NVMe controller attributes;
+  no `nvme-cli`, root, discovery, or connection command is needed. Shows
+  imported namespace block device paths with `TCP` or `RDMA`, one per line.
+  Multipath devices using both transports show `RDMA/TCP`.
+  Controller details remain in JSON only. Local PCIe devices, partitions, and
+  native multipath controller-path devices (`nvmeXcYnZ`) are excluded from the
+  display; the namespace head (`nvmeXnZ`) is shown once.
+  This does not discover targets or establish connections.
+
+`NONE` means a successful scan found no pools/devices. `UNAVAILABLE` means a
+command, permission, parsing, or sysfs read failed (including a device changing
+mid-scan); it is retried at the next refresh rather than reporting zero capacity.
+JSON exposes `zfs.pools` and `nvmeof.devices` in addition to display text.
+
+### BGP details
+
+The routing panel uses FRR `vtysh -c 'show bgp summary json'` to report
+IPv4/IPv6 unicast in the default VRF. Counts are peer/address-family sessions:
+a peer in both families is counted twice. Each entry shows address, remote AS, session state,
+and received prefixes (RX). Inactive sessions or missing prefix counts show
+`N/A`. An empty peer table shows `NO PEERS`; missing FRR, denied access,
+command failure, and unsupported output show `UNAVAILABLE`, with unknown counts
+rather than zero. FRR's vtysh access must already be available to the desktop
+user (configure the distribution's FRR/vty group permissions if needed); no
+sudo or routing configuration changes are performed. Other VRFs and address
+families are outside this basic summary.
+
 ## Desktop setup and configuration
 
 Install Eww for the desktop's display backend and Python 3. Install the optional
-GPU, Ceph and routing tools above only for the features used on that machine.
+GPU, Ceph, ZFS and routing tools above only for the features used on that machine.
 The collector expects Linux procfs/sysfs; GUI and hardware checks need the target
 desktop. It does not configure GPUs, networking, Ceph or hugepages.
 
@@ -108,36 +158,11 @@ Older collectors have different fallback behavior: missing GPU tools set
 Some legacy numeric fields still default to zero, including unreadable network
 counters and some system metrics. Missing temperatures show `N/A`; missing
 routes or OSPF database data may appear empty. These fallbacks do not prove a
-healthy device or zero activity. Newer storage/BGP status handling is described
-below.
+healthy device or zero activity. Storage/BGP status handling is described in the feature notes above.
 
-## Storage monitoring
+## Validation
 
-The storage section refreshes every 5 seconds (`ZFS_INTERVAL` and
-`NVMEOF_INTERVAL` in `.local/bin/telemetry/config.py`).
-
-- **ZFS:** requires `zpool` from the desktop distribution's OpenZFS tools.
-  Runs `zpool list -H -p -o name,size,alloc,free,health` without sudo and
-  shows every imported pool's health and free/total bytes. Pool `free` is raw
-  pool capacity; it is not dataset `available` and does not account for dataset
-  quotas, reservations, or all allocation constraints. No pools are imported
-  and no ZFS properties are changed. Verify the command as your desktop user;
-  if access is denied, configure read-only access according to your platform.
-- **NVMe-oF:** reads Linux `/sys/class/block` and NVMe controller attributes;
-  no `nvme-cli`, root, discovery, or connection command is needed. Shows
-  imported namespace block device paths with `TCP` or `RDMA`, one per line.
-  Multipath devices using both transports show `RDMA/TCP`.
-  Controller details remain in JSON only. Local PCIe devices, partitions, and
-  native multipath controller-path devices (`nvmeXcYnZ`) are excluded from the
-  display; the namespace head (`nvmeXnZ`) is shown once.
-  This does not discover targets or establish connections.
-
-`NONE` means a successful scan found no pools/devices. `UNAVAILABLE` means a
-command, permission, parsing, or sysfs read failed (including a device changing
-mid-scan); it is retried at the next refresh rather than reporting zero capacity.
-JSON exposes `zfs.pools` and `nvmeof.devices` in addition to display text.
-
-Run the storage tests without writing Python bytecode:
+Run the test suite without writing Python bytecode:
 
 ```sh
 python3 -B -m unittest discover -s tests -v
@@ -145,27 +170,3 @@ python3 -B -m unittest discover -s tests -v
 
 The tests use command/sysfs fixtures; real ZFS, NVMe-oF, and Eww rendering need
 validation on the target desktop.
-
-## BGP summary
-
-The routing panel uses FRR `vtysh -c 'show bgp summary json'` to report
-IPv4/IPv6 unicast in the default VRF. It refreshes with `ROUTING_INTERVAL`
-(default 5 seconds). Counts are peer/address-family sessions: a peer in both
-families is counted twice. Each entry shows address, remote AS, session state,
-and received prefixes (RX). Inactive sessions or missing prefix counts show
-`N/A`. An empty peer table shows `NO PEERS`; missing FRR, denied access,
-command failure, and unsupported output show `UNAVAILABLE`, with unknown counts
-rather than zero. FRR's vtysh access must already be available to the desktop
-user (configure the distribution's FRR/vty group permissions if needed); no
-sudo or routing configuration changes are performed. Other VRFs and address
-families are outside this basic summary.
-
-## CPU identity
-
-SYSTEM shows the CPU model and online core/thread counts visible in
-`/proc/cpuinfo`, refreshed with system telemetry. Physical cores are counted by
-(socket ID, core ID), so SMT siblings are not counted twice. Threads are logical
-processor entries. These are OS-visible counts, not per-process CPU affinity or
-container quota limits. If topology is absent (for example in some VMs or ARM
-systems), core count shows `N/A` rather than assuming one core per thread.
-No additional packages or elevated permissions are required.
