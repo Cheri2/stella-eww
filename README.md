@@ -49,3 +49,13 @@ rather than zero. FRR's vtysh access must already be available to the desktop
 user (configure the distribution's FRR/vty group permissions if needed); no
 sudo or routing configuration changes are performed. Other VRFs and address
 families are outside this basic summary.
+
+## CPU identity
+
+SYSTEM shows the CPU model and online core/thread counts visible in
+`/proc/cpuinfo`, refreshed with system telemetry. Physical cores are counted by
+(socket ID, core ID), so SMT siblings are not counted twice. Threads are logical
+processor entries. These are OS-visible counts, not per-process CPU affinity or
+container quota limits. If topology is absent (for example in some VMs or ARM
+systems), core count shows `N/A` rather than assuming one core per thread.
+No additional packages or elevated permissions are required.

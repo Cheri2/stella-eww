@@ -161,6 +161,15 @@
 
     (label
       :halign "start"
+      :wrap true
+      :text "${telemetry.system.cpu_model}")
+
+    (label
+      :halign "start"
+      :text "${telemetry.system.cpu_cores} cores / ${telemetry.system.cpu_threads} threads")
+
+    (label
+      :halign "start"
       :text "CPU ${telemetry.system.cpu}%   ${telemetry.system.temperature}°C")
 
     (label

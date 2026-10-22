@@ -2,6 +2,7 @@ from collections import deque
 from pathlib import Path
 
 from .config import HISTORY_LENGTH
+from .cpu_info import get_cpu_info
 from .formatting import human_bytes, human_uptime, sparkline
 
 CPU_HISTORY = deque(maxlen=HISTORY_LENGTH)
@@ -143,6 +144,7 @@ class SystemMonitor:
         hugepages = self.read_hugepages()
 
         return {
+            **get_cpu_info(),
             "cpu": round(cpu, 1),
             "cpu_graph": sparkline(CPU_HISTORY),
             "temperature": temperature if temperature is not None else "N/A",
