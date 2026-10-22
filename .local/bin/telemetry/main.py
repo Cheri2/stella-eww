@@ -1,92 +1,63 @@
 import json
 import time
 
-from .ceph import get_ceph, initial_ceph
+from .ceph import get_ceph
 from .config import (
-    CEPH_INTERVAL,
-    ZFS_INTERVAL,
-    NVMEOF_INTERVAL,
-    INTEL_GPU_INTERVAL,
-    INTERFACES,
-    INTERVAL,
-    NVIDIA_INTERVAL,
-    ROUTING_INTERVAL,
+    CEPH_INTERVAL, ZFS_INTERVAL, NVMEOF_INTERVAL, INTEL_GPU_INTERVAL,
+    INTERFACES, INTERVAL, NVIDIA_INTERVAL, ROUTING_INTERVAL,
 )
+from .features import selected_features
 from .network import NetworkInterface
-from .intel_gpu import get_intel_gpu, initial_intel_gpu
-from .nvidia import get_nvidia, initial_nvidia
-from .routing import get_routing, initial_routing
+from .intel_gpu import get_intel_gpu
+from .nvidia import get_nvidia
+from .routing import get_routing
 from .system import SystemMonitor
-from .zfs import get_zfs, initial_zfs
-from .nvmeof import get_nvmeof, initial_nvmeof
+from .zfs import get_zfs
+from .nvmeof import get_nvmeof
+
+
+class Collector:
+    """Only selected panels schedule reads, including routing subfeatures."""
+
+    def __init__(self, features):
+        self.features = set(features)
+        self.network = {
+            name: NetworkInterface(interface)
+            for name, interface in INTERFACES.items() if name in features
+        }
+        self.system = SystemMonitor() if self.features & {"system", "hugepages"} else None
+        self.routing = self.features & {"internet", "ospf", "bgp", "vm"}
+        self.jobs = {
+            "nvidia": (NVIDIA_INTERVAL, get_nvidia),
+            "intel_gpu": (INTEL_GPU_INTERVAL, get_intel_gpu),
+            "ceph": (CEPH_INTERVAL, get_ceph),
+            "zfs": (ZFS_INTERVAL, get_zfs),
+            "nvmeof": (NVMEOF_INTERVAL, get_nvmeof),
+        }
+        self.jobs = {key: job for key, job in self.jobs.items() if key in self.features}
+        if self.routing:
+            self.jobs["routing"] = (ROUTING_INTERVAL, lambda: get_routing(self.routing))
+        self.last = {}
+        self.cached = {}
+
+    def update(self, now=None):
+        now = time.monotonic() if now is None else now
+        payload = {"network": {name: monitor.update() for name, monitor in self.network.items()}}
+        if "system" in self.features:
+            payload["system"] = self.system.update(include_hugepages="hugepages" in self.features)
+        elif "hugepages" in self.features:
+            payload["system"] = {"hugepages": self.system.read_hugepages()}
+        for name, (interval, read) in self.jobs.items():
+            if name not in self.last or now - self.last[name] >= interval:
+                self.cached[name] = read()
+                self.last[name] = now
+            payload[name] = self.cached[name]
+        return payload
 
 
 def main():
-    network_monitors = {
-        name: NetworkInterface(interface)
-        for name, interface in INTERFACES.items()
-    }
-    system_monitor = SystemMonitor()
-
-    nvidia = initial_nvidia()
-    intel_gpu = initial_intel_gpu()
-    ceph = initial_ceph()
-    routing = initial_routing()
-    zfs = initial_zfs()
-    nvmeof = initial_nvmeof()
-
-    last_nvidia = 0.0
-    last_intel_gpu = 0.0
-    last_ceph = 0.0
-    last_routing = 0.0
-    last_zfs = 0.0
-    last_nvmeof = 0.0
-
+    collector = Collector(selected_features())
     while True:
         loop_start = time.monotonic()
-
-        network = {
-            name: monitor.update()
-            for name, monitor in network_monitors.items()
-        }
-        system = system_monitor.update()
-
-        if loop_start - last_nvidia >= NVIDIA_INTERVAL:
-            nvidia = get_nvidia()
-            last_nvidia = loop_start
-
-        if loop_start - last_intel_gpu >= INTEL_GPU_INTERVAL:
-            intel_gpu = get_intel_gpu()
-            last_intel_gpu = loop_start
-
-        if loop_start - last_ceph >= CEPH_INTERVAL:
-            ceph = get_ceph()
-            last_ceph = loop_start
-
-        if loop_start - last_routing >= ROUTING_INTERVAL:
-            routing = get_routing()
-            last_routing = loop_start
-
-        if loop_start - last_zfs >= ZFS_INTERVAL:
-            zfs = get_zfs()
-            last_zfs = loop_start
-
-        if loop_start - last_nvmeof >= NVMEOF_INTERVAL:
-            nvmeof = get_nvmeof()
-            last_nvmeof = loop_start
-
-        payload = {
-            "network": network,
-            "nvidia": nvidia,
-            "intel_gpu": intel_gpu,
-            "ceph": ceph,
-            "system": system,
-            "routing": routing,
-            "zfs": zfs,
-            "nvmeof": nvmeof,
-        }
-
-        print(json.dumps(payload, separators=(",", ":")), flush=True)
-
-        elapsed = time.monotonic() - loop_start
-        time.sleep(max(0.0, INTERVAL - elapsed))
+        print(json.dumps(collector.update(loop_start), separators=(",", ":")), flush=True)
+        time.sleep(max(0.0, INTERVAL - (time.monotonic() - loop_start)))

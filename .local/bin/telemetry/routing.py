@@ -120,10 +120,11 @@ def initial_routing():
     }
 
 
-def get_routing():
-    routes = get_routes()
-    neighbors = get_ospf_neighbors()
-    ospf_database = get_ospf_routers()
+def get_routing(features=None):
+    features = {"internet", "ospf", "bgp", "vm"} if features is None else set(features)
+    routes = get_routes() if features & {"internet", "vm"} else []
+    neighbors = get_ospf_neighbors() if "ospf" in features else None
+    ospf_database = get_ospf_routers() if "ospf" in features else {"self": "N/A", "routers": []}
 
     internet = {
         "available": False,
@@ -236,7 +237,7 @@ def get_routing():
             "topology": ospf_topology,
             "topology_text": ospf_topology_text,
         },
-        "bgp": get_bgp(),
+        "bgp": get_bgp() if "bgp" in features else initial_bgp("DISABLED"),
         "vm_local": {
             "count": len(local_vm),
             "networks": local_text,

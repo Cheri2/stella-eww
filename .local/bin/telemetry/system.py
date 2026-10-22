@@ -114,7 +114,7 @@ class SystemMonitor:
 
         return round(max(temperatures)) if temperatures else None
 
-    def update(self):
+    def update(self, include_hugepages=True):
         cpu = self.read_cpu()
         CPU_HISTORY.append(cpu)
 
@@ -141,7 +141,7 @@ class SystemMonitor:
             uptime_seconds = 0
 
         temperature = self.read_temperature()
-        hugepages = self.read_hugepages()
+        hugepages = self.read_hugepages() if include_hugepages else {}
 
         return {
             **get_cpu_info(),

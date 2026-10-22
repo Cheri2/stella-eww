@@ -1,0 +1,4 @@
+{
+  "panels": ["system", "lan", "ceph", "zfs", "nvmeof"],
+  "columns": 1
+}

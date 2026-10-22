@@ -1,0 +1,4 @@
+{
+  "panels": ["system", "lan", "wan", "internet", "ospf", "bgp", "vm"],
+  "columns": 2
+}
