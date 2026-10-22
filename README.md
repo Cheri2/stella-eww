@@ -135,12 +135,16 @@ the screen: adjust `columns`, `column_width`, the selected panels or styling.
 Column distribution is by panel count, not measured height. Independent window
 dragging and automatic monitor-size detection are not implemented.
 
-Example profiles are provided in `profiles/desktop.json`,
-`profiles/storage-node.json` and `profiles/router.json`. Copy one to a local
+Profiles are provided in `profiles/full.json` (all supported panels),
+`profiles/desktop.json`, `profiles/storage-node.json` and `profiles/router.json`.
+Keep `full.json` updated whenever a panel is added or removed; the test suite
+checks its coverage against the panel registry. Copy one to a local
 node configuration and customize it. From the checkout, generate and open:
 
 ```sh
 python3 -B .local/bin/stella-panels.py ~/.config/stella-eww/node.json --open
+# Or open all supported panels:
+python3 -B .local/bin/stella-panels.py profiles/full.json --open
 ```
 
 With the files installed under your home directory, use:

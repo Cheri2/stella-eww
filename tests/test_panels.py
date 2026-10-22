@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / '.local/bin'))
-from telemetry.features import selected_features
+from telemetry.features import WIDGETS, selected_features
 from telemetry.main import Collector
 from telemetry.panels import render, validate_profile
 from telemetry.routing import get_routing
@@ -95,6 +95,11 @@ class PanelTests(unittest.TestCase):
         finally:
             process.terminate()
             process.communicate(timeout=5)
+
+    def test_full_profile_includes_every_panel(self):
+        profile = validate_profile(json.loads((ROOT / 'profiles/full.json').read_text()))
+        self.assertEqual(set(profile['panels']), set(WIDGETS),
+                         "Update profiles/full.json whenever panels are added or removed")
 
     def test_all_example_profiles_generate_repeatably(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,0 +1,9 @@
+{
+  "panels": ["system", "hugepages", "internet", "ospf", "bgp", "vm", "lan", "wan", "intel_gpu", "nvidia", "ceph", "zfs", "nvmeof"],
+  "columns": 2,
+  "column_width": 380,
+  "gap": 12,
+  "x": 30,
+  "y": 70,
+  "monitor": 0
+}
