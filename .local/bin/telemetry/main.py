@@ -2,7 +2,9 @@ import json
 import time
 
 from .ceph import get_ceph
+from .corosync import get_corosync
 from .config import (
+    COROSYNC_INTERVAL, COROSYNC_SNAPSHOT,
     CEPH_INTERVAL, ZFS_INTERVAL, NVMEOF_INTERVAL, INTEL_GPU_INTERVAL,
     INTERFACES, INTERVAL, NVIDIA_INTERVAL, ROUTING_INTERVAL,
 )
@@ -28,6 +30,7 @@ class Collector:
         self.system = SystemMonitor() if self.features & {"system", "hugepages"} else None
         self.routing = self.features & {"internet", "ospf", "bgp", "vm"}
         self.jobs = {
+            "corosync": (COROSYNC_INTERVAL, lambda: get_corosync(COROSYNC_SNAPSHOT)),
             "nvidia": (NVIDIA_INTERVAL, get_nvidia),
             "intel_gpu": (INTEL_GPU_INTERVAL, get_intel_gpu),
             "ceph": (CEPH_INTERVAL, get_ceph),

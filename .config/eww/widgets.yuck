@@ -331,7 +331,8 @@
     (intel-gpu-widget)
     (gpu-widget)
     (ceph-widget)
-    (storage-widget)))
+    (storage-widget)
+    (corosync-widget)))
 
 
 ;; ============================================================
@@ -351,3 +352,8 @@
     (routing-widget)))
 
 
+
+(defwidget corosync-widget []
+  (box :orientation "v" :spacing 2 :space-evenly false
+    (label :halign "start" :text "COROSYNC")
+    (label :halign "start" :text "${telemetry.corosync.text}")))

@@ -25,3 +25,7 @@ SPARK_CHARS = "▁▂▃▄▅▆▇█"
 
 ZFS_INTERVAL = 5.0
 NVMEOF_INTERVAL = 5.0
+
+COROSYNC_INTERVAL = 5.0
+# None: direct non-root IPC; or a read-only snapshot path.
+COROSYNC_SNAPSHOT = None

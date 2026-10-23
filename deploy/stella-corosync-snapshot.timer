@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Corosync telemetry snapshot
+
+[Timer]
+OnBootSec=5s
+OnUnitInactiveSec=5s
+AccuracySec=1s
+Unit=stella-corosync-snapshot.service
+
+[Install]
+WantedBy=timers.target

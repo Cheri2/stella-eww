@@ -19,6 +19,7 @@ Python uses only the standard library.
 | Internet routing | Selected default route interface, source address, gateway and metric | `ip -j route show table main` (iproute2) |
 | OSPF neighbors | Neighbor router IDs, addresses, states and FULL/total summary | FRR `vtysh`, OSPF neighbor JSON |
 | OSPF topology | Router IDs classified as SELF, DIRECT or REMOTE | FRR OSPF router-LSA database; DIRECT means present in the neighbor list |
+| Corosync | Current membership, local node, quorum state, total/expected votes when available | Corosync quorumtool IPC or a read-only snapshot; no pcs/Pacemaker |
 | BGP | Established/total sessions, peer addresses, remote AS, state and received prefixes | FRR `vtysh`; default-VRF IPv4/IPv6 unicast summary |
 | VM networks | Configured local networks with UP/DOWN and interfaces; remote OSPF networks and next hops | Main IPv4 route table filtered by `VM_NETWORKS` |
 
@@ -87,6 +88,80 @@ user (configure the distribution's FRR/vty group permissions if needed); no
 sudo or routing configuration changes are performed. Other VRFs and address
 families are outside this basic summary.
 
+### Corosync membership and non-root access
+
+Enable the `corosync` panel (included in `profiles/full.json`). It refreshes at
+`COROSYNC_INTERVAL` (5 seconds) and uses only
+`corosync-quorumtool -s -p -i`, with the C locale and a 3-second timeout.
+There are no pcs/Pacemaker calls, sudo calls, configuration changes or vote
+changes. It shows the local node's current membership view: member IDs and
+addresses/names, the local marker, quorum and total/expected votes when provided.
+Qdevice votes are included in totals, but the synthetic qdevice row is not
+counted as a cluster node. Missing votequorum data shows unknown votes, not zero.
+
+`QUORATE` and `NOT QUORATE` are both successful observations (quorumtool exit 2
+is handled as not quorate). `UNAVAILABLE` means a missing tool, inaccessible
+IPC, stopped service, unsupported/partial output, or an unreadable snapshot.
+Membership does not prove every configured peer is online; this is not a
+per-link KNET/ring health check, remote cluster probe, or resource monitor.
+
+**Direct access:** leave `COROSYNC_SNAPSHOT = None` in `telemetry/config.py`.
+Run the command above as the desktop user first. Corosync normally restricts
+IPC access; being in a distribution's `corosync` group alone does not necessarily
+authorize it. If already authorized, no privileged process is needed.
+An administrator can explicitly authorize a numeric UID through Corosync's
+supported `uidgid` configuration (for example a `uidgid { uid: 1000 }` section,
+formatted on separate lines, or a corresponding `uidgid.d` file where supported).
+Use the target version's configuration and activation procedure.
+**This IPC authorization is broader than read-only monitoring**, so it is not
+automatically configured or recommended solely for the widget. No root-group
+membership, setuid executable or blanket passwordless sudo is needed.
+
+**Read-only snapshot alternative:** keep the desktop user outside Corosync IPC
+access. An administrator installs a small fixed-query publisher and timer;
+only that publisher runs with service privileges. The Python collector and
+Eww remain unprivileged and read `/run/stella-corosync/status.json`. This still
+needs a one-time administrator deployment when no existing IPC access is
+available; access cannot be bypassed by the widget.
+
+On the cluster node, the administrator can install the supplied example from
+the checkout after reviewing it:
+
+```sh
+sudo install -d -m 0755 /usr/local/lib/stella-corosync
+sudo install -o root -g root -m 0644 .local/bin/telemetry/corosync.py /usr/local/lib/stella-corosync/corosync.py
+sudo install -o root -g root -m 0644 deploy/stella-corosync-snapshot.service deploy/stella-corosync-snapshot.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now stella-corosync-snapshot.timer
+```
+
+The service runs a root-owned standalone copy with isolated Python mode and a
+fixed system PATH. Its output directory is root-owned, mode 0755, and the
+snapshot is atomically replaced with mode 0644. Only status output is published,
+not Corosync configuration or authentication keys. Node addresses and membership
+are visible to local readers. Do not point the privileged service at Python
+code or an output directory writable by the desktop user.
+
+Set the desktop collector's configuration to:
+
+```python
+COROSYNC_SNAPSHOT = Path("/run/stella-corosync/status.json")
+```
+
+The snapshot reader runs no Corosync commands and never falls back to direct
+IPC. It checks the collection timestamp: data older than 30 seconds or from the
+future reports `STALE`, without retaining a healthy status or inventing zero
+members. A failed publisher query replaces previous data with an unavailable
+result. After the first timer tick, check the file as the desktop user and
+restart the dashboard. The service/timer examples require systemd and are not
+installed automatically by this project. Update the root-owned publisher copy
+when its implementation changes.
+
+Protocol and permission references:
+[quorumtool manual](https://github.com/corosync/corosync/blob/main/man/corosync-quorumtool.8),
+[IPC authorization](https://github.com/corosync/corosync/blob/main/exec/ipc_glue.c),
+[uidgid configuration parser](https://github.com/corosync/corosync/blob/main/exec/coroparse.c).
+
 ## Node-specific panels and automatic layout
 
 Use a node JSON profile to select independent panels. Python generates an Eww
@@ -104,6 +179,7 @@ Available panel names:
 | Network interfaces | `lan`, `wan` |
 | GPUs | `intel_gpu`, `nvidia` |
 | Storage | `ceph`, `zfs`, `nvmeof` |
+| Cluster membership | `corosync` |
 | Routing | `internet`, `ospf` (neighbors and topology), `bgp`, `vm` (local and remote) |
 
 Example `~/.config/stella-eww/node.json`:
@@ -229,7 +305,7 @@ socket access according to the distribution; no routing changes are made.
 | `INTERVAL` (system, network, JSON output loop) | 1 second |
 | `NVIDIA_INTERVAL`, `INTEL_GPU_INTERVAL` | 2 seconds |
 | `CEPH_INTERVAL`, `ROUTING_INTERVAL` | 5 seconds |
-| `ZFS_INTERVAL`, `NVMEOF_INTERVAL` | 5 seconds |
+| `ZFS_INTERVAL`, `NVMEOF_INTERVAL`, `COROSYNC_INTERVAL` | 5 seconds |
 
 Collectors run sequentially, so slow commands and timeouts can delay updates;
 these are target intervals, not guaranteed sampling periods.

@@ -3,7 +3,7 @@
 ;; ============================================================
 
 (deflisten telemetry
-  :initial "{\"network\":{},\"nvidia\":{},\"ceph\":{},\"system\":{},\"routing\":{},\"zfs\":{\"text\":\"LOADING\"},\"nvmeof\":{\"text\":\"LOADING\"}}"
+  :initial "{\"corosync\":{\"text\":\"LOADING\"},\"network\":{},\"nvidia\":{},\"ceph\":{},\"system\":{},\"routing\":{},\"zfs\":{\"text\":\"LOADING\"},\"nvmeof\":{\"text\":\"LOADING\"}}"
   `~/.local/bin/eww.py`)
 
 

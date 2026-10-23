@@ -2,6 +2,7 @@
 import os
 
 WIDGETS = {
+    "corosync": "corosync-widget",
     "system": "system-summary-widget", "hugepages": "hugepages-widget",
     "lan": "lan-widget", "wan": "wan-widget", "intel_gpu": "intel-gpu-widget",
     "nvidia": "gpu-widget", "ceph": "ceph-widget", "zfs": "zfs-widget",

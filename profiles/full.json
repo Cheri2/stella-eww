@@ -1,5 +1,5 @@
 {
-  "panels": ["system", "hugepages", "internet", "ospf", "bgp", "vm", "lan", "wan", "intel_gpu", "nvidia", "ceph", "zfs", "nvmeof"],
+  "panels": ["system", "hugepages", "internet", "ospf", "bgp", "vm", "lan", "wan", "intel_gpu", "nvidia", "ceph", "zfs", "nvmeof", "corosync"],
   "columns": 2,
   "column_width": 380,
   "gap": 12,

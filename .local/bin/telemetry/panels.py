@@ -37,12 +37,13 @@ def initial_payload():
                            "load1", "load5", "load15", "uptime"), "LOADING")
     system["hugepages"] = {key: dict.fromkeys(("used", "total", "used_size"), "LOADING")
                            for key in ("hp_2m", "hp_1g")}
+    from .corosync import initial_corosync
     from .ceph import initial_ceph
     from .intel_gpu import initial_intel_gpu
     from .nvidia import initial_nvidia
     from .routing import initial_routing
     return {
-        "system": system,
+        "system": system, "corosync": initial_corosync(),
         "network": {key: {"interface": "LOADING", "rx": "LOADING", "tx": "LOADING",
                           "temperature": "N/A", "rx_graph": ""} for key in ("lan", "wan")},
         "nvidia": initial_nvidia(), "intel_gpu": initial_intel_gpu(),
